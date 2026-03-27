@@ -5,7 +5,6 @@ const searchInput = document.getElementById('search-input');
 const loading = document.getElementById('loading');
 const errorDiv = document.getElementById('error');
 const weatherDiv = document.getElementById('weather');
-
 const cityNameEl = document.getElementById('city-name');
 const tempEl = document.getElementById('temp');
 const descriptionEl = document.getElementById('description');
@@ -15,7 +14,7 @@ const feelsLikeEl = document.getElementById('feels-like');
 const forecastContainer = document.getElementById('forecast');
 
 // ======================
-// FUNCIÓN PRINCIPAL
+// FUNCIÓN PRINCIPAL - Buscar por ciudad
 // ======================
 async function buscarClima() {
     const ciudad = searchInput.value.trim();
@@ -25,36 +24,101 @@ async function buscarClima() {
         return;
     }
 
+    await obtenerClimaPorCoordenadas(null, null, ciudad); // reutilizamos la función de abajo
+}
+
+// ======================
+// FUNCIÓN CORREGIDA - Usar mi ubicación actual
+function usarMiUbicacion() {
+    if (!navigator.geolocation) {
+        mostrarError("Tu navegador no soporta geolocalización");
+        return;
+    }
+
     mostrarLoading(true);
     ocultarError();
 
-    try {
-        // PASO 1: Obtener coordenadas
-        const geoResponse = await fetch(
-            `https://geocoding-api.open-meteo.com/v1/search?name=${ciudad}&count=1&language=es`
-        );
-        const geoData = await geoResponse.json();
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            console.log("Ubicación obtenida:", lat, lon);
 
-        if (!geoData.results || geoData.results.length === 0) {
-            throw new Error("No se encontró la ciudad. Intenta con otro nombre.");
+            // Obtener el nombre real de la ciudad mediante geocodificación inversa
+            let nombreCiudad = "Tu ubicación";
+            try {
+                // Usar la API de reverse geocoding de Nominatim (OpenStreetMap)
+                const revRes = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=es`
+                );
+                const revData = await revRes.json();
+                if (revData && revData.address) {
+                    nombreCiudad = revData.address.city || revData.address.town || revData.address.village || revData.address.municipality || "Tu ubicación";
+                }
+            } catch (e) {
+                console.warn("No se pudo obtener el nombre de la ciudad:", e);
+            }
+
+            await obtenerClimaPorCoordenadas(lat, lon, nombreCiudad);
+        },
+        (error) => {
+            let mensaje = "No se pudo obtener tu ubicación.";
+            
+            if (error.code === 1) mensaje = "Permiso denegado. Activa la ubicación en tu navegador.";
+            else if (error.code === 2) mensaje = "Ubicación no disponible.";
+            else if (error.code === 3) mensaje = "Tiempo de espera agotado.";
+
+            mostrarError(mensaje);
+            mostrarLoading(false);
+        }
+    );
+}
+
+// ======================
+// FUNCIÓN CENTRAL: Obtener clima por coordenadas (reutilizable)
+// ======================
+async function obtenerClimaPorCoordenadas(lat, lon, nombreCiudad) {
+    try {
+        mostrarLoading(true);
+        ocultarError();
+
+        let url;
+
+        if (lat && lon) {
+            // Si tenemos coordenadas (desde geolocalización)
+            url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+                  `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
+                  `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+                  `&timezone=auto&forecast_days=6`;
+        } else {
+            // Si viene desde búsqueda por nombre → primero buscamos coordenadas
+            const geoResponse = await fetch(
+                `https://geocoding-api.open-meteo.com/v1/search?name=${nombreCiudad}&count=1&language=es`
+            );
+            const geoData = await geoResponse.json();
+
+            if (!geoData.results || geoData.results.length === 0) {
+                throw new Error("No se encontró la ciudad.");
+            }
+
+            const location = geoData.results[0];
+            lat = location.latitude;
+            lon = location.longitude;
+            nombreCiudad = location.name;
+
+            url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+                  `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
+                  `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+                  `&timezone=auto&forecast_days=6`;
         }
 
-        const location = geoData.results[0];
-        const lat = location.latitude;
-        const lon = location.longitude;
-        const nombreReal = location.name;
-
-        // PASO 2: Obtener el clima
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-            `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
-            `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-            `&timezone=auto&forecast_days=6`;
-
-        const weatherResponse = await fetch(weatherUrl);
+        // Obtener datos del clima
+        const weatherResponse = await fetch(url);
         const weatherData = await weatherResponse.json();
 
-        // Mostrar todo
-        mostrarClimaActual(weatherData, nombreReal);
+        // Mostrar resultados
+        mostrarClimaActual(weatherData, nombreCiudad);
         mostrarPronostico(weatherData);
 
     } catch (error) {
@@ -66,7 +130,7 @@ async function buscarClima() {
 }
 
 // ======================
-// MOSTRAR CLIMA ACTUAL (MEJORADO)
+// MOSTRAR CLIMA ACTUAL
 // ======================
 function mostrarClimaActual(data, ciudad) {
     const current = data.current;
@@ -74,7 +138,6 @@ function mostrarClimaActual(data, ciudad) {
     cityNameEl.textContent = ciudad;
     tempEl.textContent = Math.round(current.temperature_2m);
     
-    // Nueva línea: Icono grande según el clima
     const iconoGrande = obtenerEmojiGrande(current.weather_code);
     descriptionEl.innerHTML = `${iconoGrande} ${obtenerDescripcion(current.weather_code)}`;
 
@@ -113,34 +176,28 @@ function mostrarPronostico(data) {
 }
 
 // ======================
-// FUNCIONES AUXILIARES
+// AUXILIARES
 // ======================
 function obtenerDescripcion(code) {
     const descripciones = {
         0: "Despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado",
         3: "Nublado", 45: "Niebla", 61: "Lluvia ligera", 63: "Lluvia moderada",
-        65: "Lluvia fuerte", 95: "Tormenta", 96: "Tormenta con granizo",
-        99: "Tormenta fuerte"
+        65: "Lluvia fuerte", 95: "Tormenta"
     };
     return descripciones[code] || "Clima variable";
 }
 
-// Icono grande para el clima actual
 function obtenerEmojiGrande(code) {
     const emojis = {
         0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
-        45: "🌫️", 48: "🌫️",
-        51: "🌦️", 53: "🌦️", 55: "🌧️",
-        61: "🌧️", 63: "🌧️", 65: "🌧️",
-        71: "❄️", 73: "❄️", 75: "❄️",
-        80: "🌦️", 81: "🌧️", 82: "⛈️",
-        95: "⛈️", 96: "⛈️", 99: "⛈️"
+        45: "🌫️", 61: "🌧️", 63: "🌧️", 65: "🌧️",
+        95: "⛈️"
     };
     return emojis[code] || "🌥️";
 }
 
 function obtenerEmoji(code) {
-    return obtenerEmojiGrande(code); // reutilizamos la misma función
+    return obtenerEmojiGrande(code);
 }
 
 function mostrarLoading(mostrar) {
@@ -157,7 +214,9 @@ function ocultarError() {
     errorDiv.classList.add('hidden');
 }
 
-// Buscar con Enter
+// ======================
+// EVENTOS
+// ======================
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         buscarClima();
