@@ -29,9 +29,7 @@ async function buscarClima() {
     ocultarError();
 
     try {
-        console.log("Buscando clima para:", ciudad);
-
-        // PASO A: Obtener coordenadas
+        // PASO 1: Obtener coordenadas
         const geoResponse = await fetch(
             `https://geocoding-api.open-meteo.com/v1/search?name=${ciudad}&count=1&language=es`
         );
@@ -46,9 +44,7 @@ async function buscarClima() {
         const lon = location.longitude;
         const nombreReal = location.name;
 
-        console.log(`Coordenadas encontradas: ${lat}, ${lon}`);
-
-        // PASO B: Obtener el clima usando lat y lon
+        // PASO 2: Obtener el clima
         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
             `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
             `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
@@ -57,9 +53,7 @@ async function buscarClima() {
         const weatherResponse = await fetch(weatherUrl);
         const weatherData = await weatherResponse.json();
 
-        console.log("Datos del clima recibidos:", weatherData);
-
-        // Mostrar la información en pantalla
+        // Mostrar todo
         mostrarClimaActual(weatherData, nombreReal);
         mostrarPronostico(weatherData);
 
@@ -72,40 +66,37 @@ async function buscarClima() {
 }
 
 // ======================
-// MOSTRAR CLIMA ACTUAL
+// MOSTRAR CLIMA ACTUAL (MEJORADO)
 // ======================
 function mostrarClimaActual(data, ciudad) {
     const current = data.current;
 
     cityNameEl.textContent = ciudad;
-    
-    // Temperatura
     tempEl.textContent = Math.round(current.temperature_2m);
+    
+    // Nueva línea: Icono grande según el clima
+    const iconoGrande = obtenerEmojiGrande(current.weather_code);
+    descriptionEl.innerHTML = `${iconoGrande} ${obtenerDescripcion(current.weather_code)}`;
 
-    // Descripción (usando el weather_code)
-    descriptionEl.textContent = obtenerDescripcion(current.weather_code);
-
-    // Detalles
     humidityEl.textContent = current.relative_humidity_2m + "%";
     windEl.textContent = Math.round(current.wind_speed_10m) + " km/h";
     feelsLikeEl.textContent = Math.round(current.apparent_temperature) + "°C";
 
-    // Mostrar la sección del clima
     weatherDiv.classList.remove('hidden');
 }
 
 // ======================
-// MOSTRAR PRONÓSTICO 5 DÍAS
+// MOSTRAR PRONÓSTICO
 // ======================
 function mostrarPronostico(data) {
-    forecastContainer.innerHTML = ''; // Limpiar pronóstico anterior
+    forecastContainer.innerHTML = '';
 
     const days = data.daily.time;
     const maxTemps = data.daily.temperature_2m_max;
     const minTemps = data.daily.temperature_2m_min;
     const codes = data.daily.weather_code;
 
-    for (let i = 1; i < 6; i++) {        // Empezamos desde 1 para no repetir "hoy"
+    for (let i = 1; i < 6; i++) {
         const fecha = new Date(days[i]);
         const diaNombre = fecha.toLocaleDateString('es-ES', { weekday: 'short' });
 
@@ -126,22 +117,16 @@ function mostrarPronostico(data) {
 // ======================
 function obtenerDescripcion(code) {
     const descripciones = {
-        0: "Despejado",
-        1: "Mayormente despejado",
-        2: "Parcialmente nublado",
-        3: "Nublado",
-        45: "Niebla",
-        61: "Lluvia ligera",
-        63: "Lluvia moderada",
-        65: "Lluvia fuerte",
-        95: "Tormenta",
-        96: "Tormenta con granizo",
+        0: "Despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado",
+        3: "Nublado", 45: "Niebla", 61: "Lluvia ligera", 63: "Lluvia moderada",
+        65: "Lluvia fuerte", 95: "Tormenta", 96: "Tormenta con granizo",
         99: "Tormenta fuerte"
     };
     return descripciones[code] || "Clima variable";
 }
 
-function obtenerEmoji(code) {
+// Icono grande para el clima actual
+function obtenerEmojiGrande(code) {
     const emojis = {
         0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
         45: "🌫️", 48: "🌫️",
@@ -152,6 +137,10 @@ function obtenerEmoji(code) {
         95: "⛈️", 96: "⛈️", 99: "⛈️"
     };
     return emojis[code] || "🌥️";
+}
+
+function obtenerEmoji(code) {
+    return obtenerEmojiGrande(code); // reutilizamos la misma función
 }
 
 function mostrarLoading(mostrar) {
@@ -168,7 +157,7 @@ function ocultarError() {
     errorDiv.classList.add('hidden');
 }
 
-// Buscar con la tecla Enter
+// Buscar con Enter
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         buscarClima();
