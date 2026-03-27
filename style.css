@@ -1,0 +1,93 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e2937);
+  color: white;
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+}
+
+.search {
+  margin-bottom: 30px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+input {
+  padding: 14px 16px;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 12px;
+  width: 280px;
+  outline: none;
+}
+
+button {
+  padding: 14px 20px;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 12px;
+  background: #38bdf8;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0ea5e9;
+}
+
+.main-info {
+  margin: 40px 0;
+}
+
+.temperature {
+  font-size: 5rem;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.details {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 30px 0;
+  flex-wrap: wrap;
+}
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.forecast-card {
+  background: rgba(255,255,255,0.1);
+  padding: 15px;
+  border-radius: 12px;
+}
+
+.hidden {
+  display: none;
+}
+
+.error {
+  color: #fda4af;
+  background: rgba(248, 113, 113, 0.2);
+  padding: 15px;
+  border-radius: 12px;
+  margin: 20px 0;
+}

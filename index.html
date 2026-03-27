@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Clima</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>🌤️ Clima Actual</h1>
+
+    <!-- Buscador -->
+    <div class="search">
+      <input type="text" id="search-input" placeholder="Escribe una ciudad... (ej: Medellín)">
+      <button onclick="buscarClima()">Buscar</button>
+      <button onclick="usarMiUbicacion()">📍 Mi ubicación</button>
+    </div>
+
+    <!-- Mensajes -->
+    <div id="loading" class="hidden">Cargando clima...</div>
+    <div id="error" class="hidden error"></div>
+
+    <!-- Contenido del clima -->
+    <div id="weather" class="hidden">
+      <div class="main-info">
+        <h2 id="city-name">Ciudad</h2>
+        <div class="temperature">
+          <span id="temp">0</span>
+          <span id="unit">°C</span>
+        </div>
+        <p id="description">Descripción</p>
+      </div>
+
+      <div class="details">
+        <p>Humedad: <strong id="humidity">-</strong></p>
+        <p>Viento: <strong id="wind">-</strong></p>
+        <p>Sensación térmica: <strong id="feels-like">-</strong></p>
+      </div>
+
+      <h3>Pronóstico de 5 días</h3>
+      <div id="forecast" class="forecast-grid"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
