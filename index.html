@@ -4,44 +4,108 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mi Clima</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="container">
-    <h1>🌤️ Clima Actual</h1>
+  <div class="app-wrapper">
+    <!-- Decorative background orbs -->
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
 
-    <!-- Buscador -->
-    <div class="search">
-      <input type="text" id="search-input" placeholder="Escribe una ciudad... (ej: Medellín)">
-      <button onclick="buscarClima()">Buscar</button>
-      <button onclick="usarMiUbicacion()">📍 Mi ubicación</button>
-    </div>
-
-    <!-- Mensajes -->
-    <div id="loading" class="hidden">Cargando clima...</div>
-    <div id="error" class="hidden error"></div>
-
-    <!-- Contenido del clima -->
-    <div id="weather" class="hidden">
-      <div class="main-info">
-        <h2 id="city-name">Ciudad</h2>
-        <div class="temperature">
-          <span id="temp">0</span>
-          <span id="unit">°C</span>
+    <div class="container">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="logo">
+          <span class="logo-icon">⛅</span>
+          <h1>Clima</h1>
         </div>
-        <p id="description">Descripción</p>
+        <p class="tagline">Consulta el clima en tiempo real</p>
+      </header>
+
+      <!-- Search Bar -->
+      <div class="search-wrapper">
+        <div class="search-bar">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="Buscar ciudad... (ej: Medellín)">
+          <button class="btn btn-search" onclick="buscarClima()" id="btn-search" aria-label="Buscar clima">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+        <button class="btn btn-location" onclick="usarMiUbicacion()" id="btn-location">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          Mi ubicación
+        </button>
       </div>
 
-      <div class="details">
-        <p>Humedad: <strong id="humidity">-</strong></p>
-        <p>Viento: <strong id="wind">-</strong></p>
-        <p>Sensación térmica: <strong id="feels-like">-</strong></p>
+      <!-- Status Messages -->
+      <div id="loading" class="hidden loading-state">
+        <div class="spinner"></div>
+        <span>Obteniendo datos del clima...</span>
       </div>
+      <div id="error" class="hidden error"></div>
 
-      <h3>Pronóstico de 5 días</h3>
-      <div id="forecast" class="forecast-grid"></div>
+      <!-- Weather Content -->
+      <div id="weather" class="hidden weather-content">
+        <!-- Main Weather Card -->
+        <div class="weather-card main-card">
+          <h2 id="city-name" class="city-name">Ciudad</h2>
+          <div class="temp-display">
+            <span id="temp" class="temp-value">0</span>
+            <span id="unit" class="temp-unit">°C</span>
+          </div>
+          <p id="description" class="weather-description">Descripción</p>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="details-grid">
+          <div class="detail-card">
+            <div class="detail-icon">💧</div>
+            <div class="detail-info">
+              <span class="detail-label">Humedad</span>
+              <strong id="humidity" class="detail-value">-</strong>
+            </div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-icon">💨</div>
+            <div class="detail-info">
+              <span class="detail-label">Viento</span>
+              <strong id="wind" class="detail-value">-</strong>
+            </div>
+          </div>
+          <div class="detail-card">
+            <div class="detail-icon">🌡️</div>
+            <div class="detail-info">
+              <span class="detail-label">Sensación</span>
+              <strong id="feels-like" class="detail-value">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forecast -->
+        <div class="forecast-section">
+          <h3 class="forecast-title">Pronóstico de 5 días</h3>
+          <div id="forecast" class="forecast-grid"></div>
+        </div>
+      </div>
     </div>
+
+    <footer class="app-footer">
+      <p>Datos proporcionados por Open-Meteo</p>
+    </footer>
   </div>
 
   <script src="script.js"></script>
