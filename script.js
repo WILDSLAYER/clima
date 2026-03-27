@@ -71,7 +71,8 @@ function usarMiUbicacion() {
 
             mostrarError(mensaje);
             mostrarLoading(false);
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 }
 
@@ -89,8 +90,9 @@ async function obtenerClimaPorCoordenadas(lat, lon, nombreCiudad) {
             // Si tenemos coordenadas (desde geolocalización)
             url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
                   `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
+                  `&minutely_15=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
                   `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-                  `&timezone=auto&forecast_days=6`;
+                  `&timezone=auto&forecast_days=6&cell_selection=nearest`;
         } else {
             // Si viene desde búsqueda por nombre → primero buscamos coordenadas
             const geoResponse = await fetch(
@@ -109,8 +111,9 @@ async function obtenerClimaPorCoordenadas(lat, lon, nombreCiudad) {
 
             url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
                   `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
+                  `&minutely_15=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
                   `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
-                  `&timezone=auto&forecast_days=6`;
+                  `&timezone=auto&forecast_days=6&cell_selection=nearest`;
         }
 
         // Obtener datos del clima
@@ -133,17 +136,48 @@ async function obtenerClimaPorCoordenadas(lat, lon, nombreCiudad) {
 // MOSTRAR CLIMA ACTUAL
 // ======================
 function mostrarClimaActual(data, ciudad) {
-    const current = data.current;
+    // Intentar usar datos de 15 minutos (más precisos y actualizados)
+    let temp, humidity, apparentTemp, weatherCode, windSpeed;
+
+    if (data.minutely_15 && data.minutely_15.time && data.minutely_15.time.length > 0) {
+        // Buscar el dato más reciente (más cercano a la hora actual)
+        const ahora = new Date();
+        let indiceMasCercano = 0;
+        let menorDiferencia = Infinity;
+
+        for (let i = 0; i < data.minutely_15.time.length; i++) {
+            const diff = Math.abs(new Date(data.minutely_15.time[i]) - ahora);
+            if (diff < menorDiferencia) {
+                menorDiferencia = diff;
+                indiceMasCercano = i;
+            }
+        }
+
+        const m15 = data.minutely_15;
+        temp = m15.temperature_2m[indiceMasCercano];
+        humidity = m15.relative_humidity_2m[indiceMasCercano];
+        apparentTemp = m15.apparent_temperature[indiceMasCercano];
+        weatherCode = m15.weather_code[indiceMasCercano];
+        windSpeed = m15.wind_speed_10m[indiceMasCercano];
+    } else {
+        // Fallback a datos "current"
+        const current = data.current;
+        temp = current.temperature_2m;
+        humidity = current.relative_humidity_2m;
+        apparentTemp = current.apparent_temperature;
+        weatherCode = current.weather_code;
+        windSpeed = current.wind_speed_10m;
+    }
 
     cityNameEl.textContent = ciudad;
-    tempEl.textContent = Math.round(current.temperature_2m);
+    tempEl.textContent = Math.round(temp);
     
-    const iconoGrande = obtenerEmojiGrande(current.weather_code);
-    descriptionEl.innerHTML = `${iconoGrande} ${obtenerDescripcion(current.weather_code)}`;
+    const iconoGrande = obtenerEmojiGrande(weatherCode);
+    descriptionEl.innerHTML = `${iconoGrande} ${obtenerDescripcion(weatherCode)}`;
 
-    humidityEl.textContent = current.relative_humidity_2m + "%";
-    windEl.textContent = Math.round(current.wind_speed_10m) + " km/h";
-    feelsLikeEl.textContent = Math.round(current.apparent_temperature) + "°C";
+    humidityEl.textContent = humidity + "%";
+    windEl.textContent = Math.round(windSpeed) + " km/h";
+    feelsLikeEl.textContent = Math.round(apparentTemp) + "°C";
 
     weatherDiv.classList.remove('hidden');
 }
@@ -181,8 +215,16 @@ function mostrarPronostico(data) {
 function obtenerDescripcion(code) {
     const descripciones = {
         0: "Despejado", 1: "Mayormente despejado", 2: "Parcialmente nublado",
-        3: "Nublado", 45: "Niebla", 61: "Lluvia ligera", 63: "Lluvia moderada",
-        65: "Lluvia fuerte", 95: "Tormenta"
+        3: "Nublado", 45: "Niebla", 48: "Niebla con escarcha",
+        51: "Llovizna ligera", 53: "Llovizna moderada", 55: "Llovizna densa",
+        56: "Llovizna helada ligera", 57: "Llovizna helada densa",
+        61: "Lluvia ligera", 63: "Lluvia moderada", 65: "Lluvia fuerte",
+        66: "Lluvia helada ligera", 67: "Lluvia helada fuerte",
+        71: "Nieve ligera", 73: "Nieve moderada", 75: "Nieve fuerte",
+        77: "Granizo fino",
+        80: "Aguacero ligero", 81: "Aguacero moderado", 82: "Aguacero fuerte",
+        85: "Nevada ligera", 86: "Nevada fuerte",
+        95: "Tormenta", 96: "Tormenta con granizo ligero", 99: "Tormenta con granizo fuerte"
     };
     return descripciones[code] || "Clima variable";
 }
@@ -190,8 +232,16 @@ function obtenerDescripcion(code) {
 function obtenerEmojiGrande(code) {
     const emojis = {
         0: "☀️", 1: "🌤️", 2: "⛅", 3: "☁️",
-        45: "🌫️", 61: "🌧️", 63: "🌧️", 65: "🌧️",
-        95: "⛈️"
+        45: "🌫️", 48: "🌫️",
+        51: "🌦️", 53: "🌦️", 55: "🌦️",
+        56: "🌧️", 57: "🌧️",
+        61: "🌧️", 63: "🌧️", 65: "🌧️",
+        66: "🌧️", 67: "🌧️",
+        71: "🌨️", 73: "🌨️", 75: "🌨️",
+        77: "🌨️",
+        80: "🌧️", 81: "🌧️", 82: "🌧️",
+        85: "🌨️", 86: "🌨️",
+        95: "⛈️", 96: "⛈️", 99: "⛈️"
     };
     return emojis[code] || "🌥️";
 }
